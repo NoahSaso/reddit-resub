@@ -9,7 +9,7 @@ Environment Setup
 =================
 
 ```
-git clone https://github.com/NoahSaso/reddit-resub
+git clone https://github.com/NoahSaso/reddit-resub.git
 cd reddit-resub
 virtualenv . -p python3
 source bin/activate

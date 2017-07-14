@@ -28,7 +28,9 @@ Usage Instructions
 * Run the command
 
 Example:
-```python3 resub.py --extra AskReddit,announcements --nosub aww --unsub```
+```
+python3 resub.py --extra AskReddit,announcements --nosub aww --unsub
+```
 This will subscribe the 'to' user in the config to all subreddits of the 'from' user PLUS /r/AskReddit and /r/announcements and EXCLUDING /r/aww. It will also unsubscribe the 'to' user from all OTHER subreddits, essentially ensuring that it is subscribed to exactly the same subreddits as the 'from' user (If a subreddit is part of the 'nosub' command, like /r/aww, the 'to' user will be unsunbscribed from it).
 
 ```

@@ -1,7 +1,7 @@
 reddit-resub
 ============
 
-Export / import subreddits from one Reddit account to another Reddit account.
+Transfer subreddits from one Reddit account to another.
 
 Useful when you create a new user account and want to transfer your previous subreddits over.
 

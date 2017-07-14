@@ -25,6 +25,8 @@ Usage Instructions
 * `description` and `about url` don't matter and are not required (as of writing this)
 * `redirect url` is required but doesn't matter, just put `https://reddit.com`
 * Copy `config.ini.example` to `config.ini` and fill out your credentials
+* `client_id` is the 14-character string under `personal use script`
+* `client_secret` is the 27-character string next to `secret:`
 * Run the command
 
 Example:

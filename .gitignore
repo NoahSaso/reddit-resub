@@ -1,6 +1,6 @@
 bin/
 include/
 lib/
-*.subs
-praw.ini
+config.ini
 pip-selfcheck.json
+.Python

@@ -2,109 +2,77 @@
 
 import praw
 import argparse
+import configparser
 import json
 
 parser = argparse.ArgumentParser(
-    description='Resubscribe to your old subreddits.')
-parser.add_argument('--import', '-i', action="store_true",
-                    help="Specify -i to import to the user, the default is to \
-                    save from a user.")
-parser.add_argument('--user', '-u', help="Reddit username.")
-parser.add_argument('--file', '-f', help="Provide a filename to use.")
-
+    description='Transfer subreddit subscriptions from one account to another.')
+parser.add_argument('-e', '--extra', help="extra subreddits to subscribe to", dest="extra", metavar="sub1,sub2,etc.")
+parser.add_argument('-n', '--nosub', help="don't sub to these subreddits even if in from's account", dest="nosub", metavar="sub1,sub2,etc.", default="")
+parser.add_argument('-u', '--unsub', help="also unsub to's account from subreddits not on from's account", action="store_true", dest="unsub")
 
 class Resub:
-    _r = praw.Reddit(user_agent='reddit-resub 2017-05-08')
+    def __init__(self, args):
+        self.args = args
 
-    def __init__(self, subscribe, user=None, filename=None):
-        self._user = self.get_user()
+        config = configparser.RawConfigParser()
+        config.read('config.ini')
 
-        if not filename:
-            filename = '{user}.subs'.format(user=self._user)
-        self._filename = filename
+        app = config['app']
+        self.from_creds = config['from']
+        self.to_creds = config['to']
 
-        if subscribe:
-            print("Subscribing to subreddits in '{file}'".format(
-                file=filename, user=self.get_user()))
-            self.sub_clever()
-        else:
-            print("Exporting {user}'s subreddits to {file}".format(
-                file=filename, user=self.get_user()))
-            self.export_subs()
+        self._r_from = praw.Reddit(user_agent='reddit-resub-from 2017-07-13', username=self.from_creds['username'], password=self.from_creds['password'], client_id=app['client_id'], client_secret=app['client_secret'])
+        self._r_to = praw.Reddit(user_agent='reddit-resub-to 2017-07-13', username=self.to_creds['username'], password=self.to_creds['password'], client_id=app['client_id'], client_secret=app['client_secret'])
 
-    def unsub(self, subreddit):
-        '''
-        Unsubscribes and prints to STDOUT
-        '''
-        self._r.subreddit(subreddit).unsubscribe()
-        print("Unsubscribed from subreddit {sub}".format(sub=subreddit))
+    def go(self):
 
-    def sub(self, subreddit):
-        '''
-        Try to subscribe to a given subreddit.
-        '''
-        self._r.subreddit(subreddit).subscribe()
-        print("Subscribed to {sub}".format(sub=subreddit))
+        print("Subscribing {to_name} to subs of {from_name}".format(to_name=self.to_creds['username'], from_name=self.from_creds['username']))
 
-    def get_wanted_subs(self):
-        '''
-        Opens the list of subreddits we want to subscribe to
-        from a json fille.
-        '''
-        fh = open(self._filename, 'r')
-        subs = json.load(fh)
-        fh.close()
-        return list(set(subs))
+        # Subs in from's account
+        from_subs = self.get_subs(self._r_from)
+        print("Got subs of from user")
+        # Add extra to subscribe to if argument passed
+        if self.args.extra:
+            from_subs.extend(self.args.extra.split(','))
 
-    def sub_clever(self):
-        '''
-        Use the minimal number of API calls to subscribe / unsubscribe.
-        '''
-        wanted_subs = set(self.get_wanted_subs())
-        current_subs = set(self.get_subs())
-        for sub in wanted_subs - current_subs:
-            if sub in wanted_subs:
-                # Subscribe to wanted subs we're not already subbed to
-                self.sub(sub)
-        for sub in current_subs - wanted_subs:
-            # Unsub from everything remaining
-            self.unsub(sub)
+        # Subs in to's account
+        to_subs = self.get_subs(self._r_to)
+        print("Got subs of to user")
 
-    def get_user(self):
-        '''
-        Specifically returns the username from the Reddit object, not the one
-        specified by the user / script. This is guaranteed to be correct in
-        other words.
-        '''
-        return str(self._r.user.me())
+        # Subscribe to subs in from's account if not already in to's account and not in nosub argument is passed
+        subs_to_add = [sub for sub in from_subs if sub not in (to_subs + self.args.nosub.split(','))]
+        print("Subscribing to {subs_count} subs".format(subs_count=len(subs_to_add)))
+        for sub in subs_to_add:
+            self.sub(self._r_to, sub)
+            print("Subscribed to {sub} ({left} left)".format(sub=sub, left=(len(subs_to_add) - (subs_to_add.index(sub) + 1))))
 
-    def export_subs(self):
-        '''
-        Saves the user's subreddits to file.
-        '''
-        fh = open(self._filename, 'w')
-        subs = sorted(self.get_subs(), key=str.lower)
-        json.dump(subs, fh, indent=2)
-        fh.close()
+        # Unsub from subs in to's account including the 'nosub' subs if unsub argument is passed
+        if self.args.unsub:
+            subs_to_del = [sub for sub in to_subs if sub not in (from_subs - self.args.nosub.split(','))]
+            print("Unsubscribing from {subs_count} subs".format(subs_count=len(subs_to_del)))
+            for sub in subs_to_del:
+                self.unsub(self._r_to, sub)
+                print("Unsubscribed from {sub} ({left} left)".format(sub=sub, left=(len(subs_to_del) - (subs_to_del.index(sub) + 1))))
 
-    def get_subs(self):
-        '''
-        Returns a unique list of subreddits to which the user is subscribed.
-        '''
-        my_subs = set()
-        for sub in self._r.user.subreddits(limit=None):
-            my_subs.add(str(sub))
-        return list(my_subs)
+    def sub(self, reddit_instance, sub):
+        # Subscribe user to subreddit
+        reddit_instance.subreddit(sub).subscribe()
+
+    def unsub(self, reddit_instance, sub):
+        # Unsubscribes user from subreddit
+        reddit_instance.subreddit(sub).unsubscribe()
+
+    def get_subs(self, reddit_instance):
+        # Returns a list of subreddits to which the user is subscribed
+        my_subs = []
+        for sub in reddit_instance.user.subreddits(limit=None):
+            my_subs.append(str(sub))
+        return my_subs
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    # Boolean, True if --import / -i
-    # If true then subscribe, if false then export to file.
-    subscribe = getattr(args, 'import')
-
-    r = Resub(subscribe,
-              filename=getattr(args, 'file'),
-              user=getattr(args, 'user')
-              )
+    r = Resub(args)
+    r.go()

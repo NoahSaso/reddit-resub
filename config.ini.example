@@ -1,0 +1,11 @@
+[DEFAULT]
+client_id = 
+client_secret = 
+
+[from]
+username = 
+password = 
+
+[to]
+username = 
+password = 

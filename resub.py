@@ -12,7 +12,7 @@ parser.add_argument('-e', '--extra', help="extra subreddits to subscribe to", de
 parser.add_argument('-n', '--nosub', help="don't sub to these subreddits even if in from's account", dest="nosub", metavar="sub1,sub2,etc.", default="")
 parser.add_argument('-u', '--unsub', help="also unsub to's account from subreddits not on from's account", action="store_true", dest="unsub")
 parser.add_argument('-r', '--removesubs', help="remove all subs from to's account", action="store_true", dest="removesubs")
-parser.add_argument('-c', '--config', help="override config file", dest="configfile")
+parser.add_argument('-c', '--config', help="override config file", dest="configfile", default="config.ini")
 parser.add_argument('-i', '--interactive', help="enter passwords securely instead of storing them in a config file", action="store_true", dest="interactive")
 
 class Sub:
@@ -20,16 +20,13 @@ class Sub:
         self.args = args
 
         config = configparser.RawConfigParser()
-        if self.args.configfile:
-        	config.read(self.args.configfile)
-        else:
-	        config.read('config.ini')
+        config.read(self.args.configfile)
 
         app = config['app']
         self.from_creds = config['from']
         self.to_creds = config['to']
 
-        if self.args.interactive or app.interactive.lower() in ['true', '1', 'yes']:
+        if self.args.interactive or app['interactive'].lower() in ['true', '1', 'yes']:
         	self.from_creds['username'] = input("Enter from account's username: ")
         	self.from_creds['password'] = getpass.getpass("Enter from account's password: ")
 

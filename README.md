@@ -36,7 +36,8 @@ python3 resub.py --extra AskReddit,announcements --nosub aww --unsub
 This will subscribe the 'to' user in the config to all subreddits of the 'from' user PLUS /r/AskReddit and /r/announcements and EXCLUDING /r/aww. It will also unsubscribe the 'to' user from all OTHER subreddits, essentially ensuring that it is subscribed to exactly the same subreddits as the 'from' user (if a subreddit is part of the 'nosub' command, like /r/aww, the 'to' user will be unsubscribed from it).
 
 ```
-usage: resub.py [-h] [-e sub1,sub2,etc.] [-n sub1,sub2,etc.] [-u]
+usage: resub.py [-h] [-e sub1,sub2,etc.] [-n sub1,sub2,etc.] [-u] [-r]
+                [-c other_config.ini] [-i]
 
 Transfer subreddit subscriptions from one account to another.
 
@@ -49,4 +50,9 @@ optional arguments:
                         account
   -u, --unsub           also unsub to's account from subreddits not on from's
                         account
+  -r, --removesubs      remove all subs from to's account
+  -c other_config.ini, --config other_config.ini
+                        override config file
+  -i, --interactive     enter passwords securely instead of storing them in a
+                        config file
 ```

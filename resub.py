@@ -4,28 +4,56 @@ import praw
 import argparse
 import configparser
 import json
+import getpass
 
 parser = argparse.ArgumentParser(
     description='Transfer subreddit subscriptions from one account to another.')
 parser.add_argument('-e', '--extra', help="extra subreddits to subscribe to", dest="extra", metavar="sub1,sub2,etc.")
 parser.add_argument('-n', '--nosub', help="don't sub to these subreddits even if in from's account", dest="nosub", metavar="sub1,sub2,etc.", default="")
 parser.add_argument('-u', '--unsub', help="also unsub to's account from subreddits not on from's account", action="store_true", dest="unsub")
+parser.add_argument('-r', '--removesubs', help="remove all subs from to's account", action="store_true", dest="removesubs")
+parser.add_argument('-c', '--config', help="override config file", dest="configfile")
+parser.add_argument('-i', '--interactive', help="enter passwords securely instead of storing them in a config file", action="store_true", dest="interactive")
 
-class Resub:
+class Sub:
     def __init__(self, args):
         self.args = args
 
         config = configparser.RawConfigParser()
-        config.read('config.ini')
+        if self.args.configfile:
+        	config.read(self.args.configfile)
+        else:
+	        config.read('config.ini')
 
         app = config['app']
         self.from_creds = config['from']
         self.to_creds = config['to']
 
+        if self.args.interactive or app.interactive.lower() in ['true', '1', 'yes']:
+        	self.from_creds['username'] = input("Enter from account's username: ")
+        	self.from_creds['password'] = getpass.getpass("Enter from account's password: ")
+
+        	self.to_creds['username'] = input("Enter to account's username: ")
+        	self.to_creds['password'] = getpass.getpass("Enter to account's password: ")
+
+        	app['client_id'] = input("Enter client id: ")
+        	app['client_secret'] = getpass.getpass("Enter client secret: ")
+
         self._r_from = praw.Reddit(user_agent='reddit-resub-from 2017-07-13', username=self.from_creds['username'], password=self.from_creds['password'], client_id=app['client_id'], client_secret=app['client_secret'])
         self._r_to = praw.Reddit(user_agent='reddit-resub-to 2017-07-13', username=self.to_creds['username'], password=self.to_creds['password'], client_id=app['client_id'], client_secret=app['client_secret'])
 
-    def go(self):
+    def remove(self):
+
+    	# Subs in to's account
+    	to_subs = self.get_subs(self._r_to)
+
+    	print("Removing all ({count}) subs from {to_name}".format(count=len(to_subs), to_name=self.to_creds['username']))
+
+    	for sub in to_subs:
+    		self.unsub(self._r_to, sub)
+    		print("Unsubscribed from {sub} ({left} left)".format(sub=sub, left=(len(to_subs) - (to_subs.index(sub) + 1))))
+
+    def transfer(self):
 
         print("Subscribing {to_name} to subs of {from_name}".format(to_name=self.to_creds['username'], from_name=self.from_creds['username']))
 
@@ -74,5 +102,8 @@ class Resub:
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    r = Resub(args)
-    r.go()
+    s = Sub(args)
+    if args.removesubs:
+    	s.remove()
+    else:
+	    s.transfer()

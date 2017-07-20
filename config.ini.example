@@ -1,11 +1,12 @@
 [DEFAULT]
-client_id = 
-client_secret = 
+client_id = abcd1234
+client_secret = abcd1234
+interactive = false
 
 [from]
-username = 
-password = 
+username = spez
+password = abcd
 
 [to]
-username = 
-password = 
+username = kn0thing
+password = 1234
